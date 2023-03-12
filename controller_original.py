@@ -3,8 +3,8 @@
 """
 Ryu Tutorial Controller
 
-This controller allows OpenFlow datapaths to act as Ethernet Hubs. So switch is acting as a hub, controller is not the hub.
-Using the tutorial you should convert this to a layer 2 learning switch.
+This controller allows OpenFlow datapaths to act as Ethernet Hubs. Using the
+tutorial you should convert this to a layer 2 learning switch.
 
 See the README for more...
 """
@@ -15,7 +15,6 @@ from ryu.controller.handler import CONFIG_DISPATCHER, MAIN_DISPATCHER, set_ev_cl
 from ryu.ofproto import ofproto_v1_3
 from ryu.lib.packet import packet
 from ryu.lib.dpid import dpid_to_str
-from ryu.lib.packet import ethernet
 
 
 class Controller(RyuApp):
@@ -24,9 +23,7 @@ class Controller(RyuApp):
 
     def __init__(self, *args, **kwargs):
         super(Controller, self).__init__(*args, **kwargs)
-        self.mac_addr = {}
 
-    # I would say kinda ignore this, its like a default
     @set_ev_cls(ofp_event.EventOFPSwitchFeatures, CONFIG_DISPATCHER)
     def features_handler(self, ev):
         '''
@@ -60,21 +57,9 @@ class Controller(RyuApp):
         pkt = packet.Packet(msg.data)
         in_port = msg.match['in_port']
         data = msg.data if msg.buffer_id == ofproto.OFP_NO_BUFFER else None
-
-        # standard approach for getting the ethernet stuffs, no error handling
-        # solution does have one where they talked about if it's none
-        # ethernet is really confusing, so src and dst are both mac addr in_port is port
-        eth_header = packet.Packet(data).get_protocol(ethernet.ethernet)
-        if eth_header.src not in self.mac_addr:
-            self.mac_addr[eth_header.src] = in_port
-
-        dst_mac = eth_header.dst
-        if dst_mac in self.mac_addr:
-            actions = [datapath.ofproto_parser.OFPActionOutput(self.mac_addr[dst_mac])]
-        else:
-            actions = [datapath.ofproto_parser.OFPActionOutput(ofproto.OFPP_FLOOD)]
+        actions = [datapath.ofproto_parser.OFPActionOutput(ofproto.OFPP_FLOOD)]
         out = parser.OFPPacketOut(datapath=datapath, buffer_id=msg.buffer_id, in_port=in_port, actions=actions, data=data)
-        self.logger.debug("Sending packet out")
+        self.logger.info("Sending packet out")
         datapath.send_msg(out)
         return
 
