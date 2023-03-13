@@ -70,11 +70,16 @@ class Controller(RyuApp):
 
         dst_mac = eth_header.dst
         if dst_mac in self.mac_addr:
-            actions = [datapath.ofproto_parser.OFPActionOutput(self.mac_addr[dst_mac])]
+            action = [datapath.ofproto_parser.OFPActionOutput(self.mac_addr[dst_mac])]
+            match = parser.OFPMatch(eth_dst=dst_mac)
+            # one quite interesting thing for flow table is that, I think its a handshake (well maybe handshaking multiple times...)
+            # so even if I only sent one packet from h2 to h4, two flow entries will be created
+            # and those two hosts are able to ping each other
+            self.__add_flow(datapath, 1, match, action)
         else:
-            actions = [datapath.ofproto_parser.OFPActionOutput(ofproto.OFPP_FLOOD)]
-        out = parser.OFPPacketOut(datapath=datapath, buffer_id=msg.buffer_id, in_port=in_port, actions=actions, data=data)
-        self.logger.debug("Sending packet out")
+            action = [datapath.ofproto_parser.OFPActionOutput(ofproto.OFPP_FLOOD)]
+        out = parser.OFPPacketOut(datapath=datapath, buffer_id=msg.buffer_id, in_port=in_port, actions=action, data=data)
+        self.logger.info(f"Sending packet out {dst_mac}")
         datapath.send_msg(out)
         return
 
